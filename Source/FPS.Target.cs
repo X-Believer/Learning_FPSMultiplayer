@@ -1,0 +1,15 @@
+// Shuyang Xing All Rights Deserve
+
+using UnrealBuildTool;
+using System.Collections.Generic;
+
+public class FPSTarget : TargetRules
+{
+	public FPSTarget(TargetInfo Target) : base(Target)
+	{
+		Type = TargetType.Game;
+		DefaultBuildSettings = BuildSettingsVersion.V7;
+
+		ExtraModuleNames.AddRange( new string[] { "FPS" } );
+	}
+}

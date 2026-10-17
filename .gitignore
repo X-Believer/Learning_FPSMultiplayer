@@ -76,6 +76,7 @@ SourceArt/**/*.tga
 # Map cooked data (UE generated)
 ############################################
 *_BuiltData.uasset
+/Content/Effects/Textures/Flipbooks/SmokeSwirl_3_Flipbook_CHANNELPACK.uasset
 
 ############################################
 # Unreal config-generated artifacts
