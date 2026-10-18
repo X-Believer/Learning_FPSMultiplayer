@@ -4,13 +4,16 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Interfaces/PlayerInterface.h"
 #include "ShooterCharacter.generated.h"
 
+class UInputAction;
+class UCombatComponent;
 class UCameraComponent;
 class USpringArmComponent;
 
 UCLASS()
-class FPS_API AShooterCharacter : public ACharacter
+class FPS_API AShooterCharacter : public ACharacter, public IPlayerInterface
 {
 	GENERATED_BODY()
 
@@ -18,12 +21,29 @@ public:
 	AShooterCharacter();
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual void PossessedBy(AController* NewController) override;
 	
+	/* Player Interface */
+	virtual FName GetWeaponAttachPoint_Implementation(const FGameplayTag& WeaponType) const override;
+	virtual USkeletalMeshComponent* GetMesh1P_Implementation() const override;
+	virtual USkeletalMeshComponent* GetMesh3P_Implementation() const override;
+	/* End Player Interface */
 protected:
 	virtual void BeginPlay() override;
+	virtual void BeginDestroy() override;
 
 private:	
 
+	void Input_CycleWeapon();
+	void Input_FireWeapon_Pressed();
+	void Input_FireWeapon_Released();
+	void Input_ReloadWeapon();
+	void Input_Aim_Pressed();
+	void Input_Aim_Released();
+	
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UCombatComponent> CombatComponent;
+	
 	// 1st person mesh (arms), visible only to the owning player.
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<USkeletalMeshComponent> Mesh1P;
@@ -33,4 +53,17 @@ private:
 	
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UCameraComponent> FirstPersonCamera;
+	
+	UPROPERTY(EditAnywhere, Category = "FPS|Input")
+	TObjectPtr<UInputAction> CycleWeaponAction;
+	
+	UPROPERTY(EditAnywhere, Category = "FPS|Input")
+	TObjectPtr<UInputAction> FireWeaponAction;
+	
+	UPROPERTY(EditAnywhere, Category = "FPS|Input")
+	TObjectPtr<UInputAction> ReloadWeaponAction;
+	
+	UPROPERTY(EditAnywhere, Category = "FPS|Input")
+	TObjectPtr<UInputAction> AimWeaponAction;
+	
 };

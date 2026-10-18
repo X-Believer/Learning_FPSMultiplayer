@@ -1,0 +1,22 @@
+﻿// Shuyang Xing All Rights Deserve
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
+#include "Engine/DataAsset.h"
+#include "WeaponData.generated.h"
+
+/**
+ * 
+ */
+UCLASS()
+class FPS_API UWeaponData : public UDataAsset
+{
+	GENERATED_BODY()
+	
+public:
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="FPS|WeaponData|Weapons")
+	TMap<FGameplayTag, FName> GripPoints;
+};
