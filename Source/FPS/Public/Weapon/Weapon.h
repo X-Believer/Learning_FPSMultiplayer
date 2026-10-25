@@ -20,14 +20,15 @@ public:
 	USkeletalMeshComponent* GetMesh3P() const { return Mesh3P; }
 	
 	void AttachToOwningPawn() const;
-
-protected:
-	virtual void BeginPlay() override;
 	
-	UPROPERTY(EditAnywhere, Category = "FPS|WeaponType")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FPS|WeaponType")
 	FGameplayTag WeaponType;
 	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "FPS|Aiming")
+	float AimFOV;
 	
+protected:
+	virtual void BeginPlay() override;
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Weapon")

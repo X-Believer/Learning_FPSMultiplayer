@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Interfaces/PlayerInterface.h"
+#include "ShooterTypes/ShooterTypes.h"
 #include "ShooterCharacter.generated.h"
 
 class UInputAction;
@@ -28,10 +29,32 @@ public:
 	virtual USkeletalMeshComponent* GetMesh1P_Implementation() const override;
 	virtual USkeletalMeshComponent* GetMesh3P_Implementation() const override;
 	/* End Player Interface */
+	
+	UFUNCTION(BlueprintCallable)
+	FRotator GetFixedAimRotation() const;
+	
+	UPROPERTY(BlueprintReadOnly, Category="FPS|FABRIK")
+	FTransform FABRIK_SocketTransform;
+	
+	UFUNCTION(BlueprintCallable)
+	bool HasCurrentWeapon() const;
+	
 protected:
 	virtual void BeginPlay() override;
 	virtual void BeginDestroy() override;
-
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="FPS|Combat")
+	TObjectPtr<UCombatComponent> CombatComponent;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="FPS|Camera")
+	TObjectPtr<UCameraComponent> FirstPersonCamera;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="FPS|Aiming")
+	float DefaultFOV;
+	
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnAim(bool bIsAiming);
+	
 private:	
 
 	void Input_CycleWeapon();
@@ -41,8 +64,21 @@ private:
 	void Input_Aim_Pressed();
 	void Input_Aim_Released();
 	
-	UPROPERTY(VisibleAnywhere)
-	TObjectPtr<UCombatComponent> CombatComponent;
+	void CalculateFABRIKSocketTransform();
+	void CalculateTurnInPlaceParams(float DeltaTime);
+	void TurnInPlace(float DeltaTime);
+	
+	FRotator StartingAimingRotation;
+	float InterpAO_Yaw;
+	
+	UPROPERTY(BlueprintReadOnly, Category="FPS|TurnInPlace", meta=(AllowPrivateAccess="true"))
+	float AO_Yaw;
+	
+	UPROPERTY(BlueprintReadOnly, Category="FPS|Strafing", meta=(AllowPrivateAccess="true"))
+	float MovementOffsetYaw;
+	
+	UPROPERTY(BlueprintReadOnly, Category="FPS|TurnInPlace", meta=(AllowPrivateAccess="true"))
+	ETurnInPlace TurningStatus;
 	
 	// 1st person mesh (arms), visible only to the owning player.
 	UPROPERTY(VisibleAnywhere)
@@ -50,9 +86,6 @@ private:
 	
 	UPROPERTY(VisibleAnywhere) 
 	TObjectPtr<USpringArmComponent> SpringArm;
-	
-	UPROPERTY(VisibleAnywhere)
-	TObjectPtr<UCameraComponent> FirstPersonCamera;
 	
 	UPROPERTY(EditAnywhere, Category = "FPS|Input")
 	TObjectPtr<UInputAction> CycleWeaponAction;

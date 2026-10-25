@@ -25,6 +25,8 @@ AWeapon::AWeapon()
 	Mesh3P->CastShadow = true;
 	Mesh3P->bReceivesDecals = false;
 	Mesh3P->SetHiddenInGame(true, true);
+	
+	AimFOV = 65.0f;
 }
 
 void AWeapon::OnRep_Instigator()

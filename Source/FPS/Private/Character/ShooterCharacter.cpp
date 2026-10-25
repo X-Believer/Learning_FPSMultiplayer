@@ -9,6 +9,8 @@
 #include "Data/WeaponData.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Weapon/Weapon.h"
 
 AShooterCharacter::AShooterCharacter()
 {
@@ -42,12 +44,22 @@ AShooterCharacter::AShooterCharacter()
 	
 	CombatComponent = CreateDefaultSubobject<UCombatComponent>(TEXT("CombatComponent"));
 	CombatComponent->SetIsReplicated(true);
+	
+	DefaultFOV = 90.0f;
+	TurningStatus = ETurnInPlace::NotTurning;
 }
 
 void AShooterCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	FirstPersonCamera->SetFieldOfView(DefaultFOV);
+	StartingAimingRotation = FRotator(0.f, GetBaseAimRotation().Yaw, 0.f);
+}
+
+bool AShooterCharacter::HasCurrentWeapon() const
+{
+	return CombatComponent && CombatComponent->GetCurrentWeapon() != nullptr;
 }
 
 void AShooterCharacter::BeginDestroy()
@@ -62,7 +74,83 @@ void AShooterCharacter::BeginDestroy()
 void AShooterCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	
+	CalculateFABRIKSocketTransform();
+	CalculateTurnInPlaceParams(DeltaTime);
+}
 
+void AShooterCharacter::CalculateFABRIKSocketTransform()
+{
+	if (IsValid(CombatComponent) && IsValid(CombatComponent->GetCurrentWeapon()) && IsValid(CombatComponent->GetCurrentWeapon()->GetMesh3P()))
+	{
+		FABRIK_SocketTransform = CombatComponent->GetCurrentWeapon()->GetMesh3P()->GetSocketTransform("FABRIK_Socket", RTS_World);
+		
+		FVector OutLocation;
+		FRotator OutRotation;
+		GetMesh()->TransformToBoneSpace("hand_r", FABRIK_SocketTransform.GetLocation(), FABRIK_SocketTransform.GetRotation().Rotator(), OutLocation, OutRotation);
+		
+		FABRIK_SocketTransform.SetLocation(OutLocation);
+		FABRIK_SocketTransform.SetRotation(OutRotation.Quaternion());
+	}
+}
+
+void AShooterCharacter::CalculateTurnInPlaceParams(float DeltaTime)
+{
+	FVector Velocity = GetVelocity();
+	Velocity.Z = 0.0f;
+	float Speed = Velocity.Size();
+	bool bIsInAir = GetCharacterMovement()->IsFalling();
+	
+	if (Speed == 0.f && !bIsInAir)
+	{
+		FRotator CurrentAimRotation(0.f, GetBaseAimRotation().Yaw, 0.f);
+		FRotator DeltaAimRotation = UKismetMathLibrary::NormalizedDeltaRotator(CurrentAimRotation, StartingAimingRotation);
+		AO_Yaw = DeltaAimRotation.Yaw;
+		
+		if (TurningStatus == ETurnInPlace::NotTurning)
+		{
+			InterpAO_Yaw = AO_Yaw;
+		}
+		
+		TurnInPlace(DeltaTime);
+	}
+	
+	if (Speed > 0.f || bIsInAir)
+	{
+		StartingAimingRotation = FRotator(0.f, GetBaseAimRotation().Yaw, 0.f);
+		AO_Yaw = 0.f;
+		
+		FRotator AimRotation = GetBaseAimRotation();
+		FRotator MovementRotation = UKismetMathLibrary::MakeRotFromX(GetVelocity());
+		MovementOffsetYaw = UKismetMathLibrary::NormalizedDeltaRotator(MovementRotation, AimRotation).Yaw;
+		
+		TurningStatus = ETurnInPlace::NotTurning;
+	}
+	AO_Yaw *= -1.f;
+}
+
+void AShooterCharacter::TurnInPlace(float DeltaTime)
+{
+	if (AO_Yaw > 90.f)
+	{
+		TurningStatus = ETurnInPlace::Right;
+	}
+	else if (AO_Yaw < -90.f)
+	{
+		TurningStatus = ETurnInPlace::Left;
+	}
+	if (TurningStatus != ETurnInPlace::NotTurning)
+	{
+		float InterpSpeed = 4.0f;
+		InterpAO_Yaw = FMath::FInterpTo(InterpAO_Yaw, 0.f, DeltaTime, InterpSpeed);
+		AO_Yaw = InterpAO_Yaw;
+		
+		if (FMath::Abs(AO_Yaw) < 5.f)
+		{
+			TurningStatus = ETurnInPlace::NotTurning;
+			StartingAimingRotation = FRotator(0.f, GetBaseAimRotation().Yaw, 0.f);
+		}
+	}
 }
 
 void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -103,6 +191,18 @@ USkeletalMeshComponent* AShooterCharacter::GetMesh3P_Implementation() const
 	return GetMesh();
 }
 
+FRotator AShooterCharacter::GetFixedAimRotation() const
+{
+	FRotator AimRotation = GetBaseAimRotation();
+	if (AimRotation.Pitch > 90.0f && !IsLocallyControlled())
+	{
+		const FVector2D InRange(270.f, 360.f);
+		const FVector2D OutRange(-90.f, 0.f);
+		AimRotation.Pitch = FMath::GetMappedRangeValueClamped(InRange, OutRange, AimRotation.Pitch);
+	}
+	return AimRotation;
+}
+
 void AShooterCharacter::Input_CycleWeapon()
 {
 	CombatComponent->Initiate_CycleWeapon();
@@ -126,9 +226,12 @@ void AShooterCharacter::Input_ReloadWeapon()
 void AShooterCharacter::Input_Aim_Pressed()
 {
 	CombatComponent->Initiate_Aim_Pressed();
+	OnAim(true);
 }
 
 void AShooterCharacter::Input_Aim_Released()
 {
 	CombatComponent->Initiate_Aim_Released();
+	OnAim(false);
 }
+
