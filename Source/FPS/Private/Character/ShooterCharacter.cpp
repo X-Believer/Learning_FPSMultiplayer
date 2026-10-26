@@ -47,6 +47,12 @@ AShooterCharacter::AShooterCharacter()
 	
 	DefaultFOV = 90.0f;
 	TurningStatus = ETurnInPlace::NotTurning;
+	bWeaponFirstReplicated = false;
+}
+
+bool AShooterCharacter::HasWeaponFirstReplicated() const
+{
+	return bWeaponFirstReplicated;
 }
 
 void AShooterCharacter::BeginPlay()
@@ -175,6 +181,16 @@ void AShooterCharacter::PossessedBy(AController* NewController)
 	}
 }
 
+void AShooterCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+	
+	if (IsValid(CombatComponent))
+	{
+		CombatComponent->InitializeWeaponWidgets();
+	}
+}
+
 FName AShooterCharacter::GetWeaponAttachPoint_Implementation(const FGameplayTag& WeaponType) const
 {
 	checkf(CombatComponent->WeaponData, TEXT("WeaponData is not set in CombatComponent"));
@@ -189,6 +205,20 @@ USkeletalMeshComponent* AShooterCharacter::GetMesh1P_Implementation() const
 USkeletalMeshComponent* AShooterCharacter::GetMesh3P_Implementation() const
 {
 	return GetMesh();
+}
+
+void AShooterCharacter::WeaponReplicated_Implementation()
+{
+	if (!bWeaponFirstReplicated)
+	{
+		bWeaponFirstReplicated = true;
+		OnWeaponFirstReplicated.Broadcast(CombatComponent->GetCurrentWeapon());
+	}
+}
+
+AWeapon* AShooterCharacter::GetCurrentWeapon_Implementation() const
+{
+	return CombatComponent ? CombatComponent->GetCurrentWeapon() : nullptr;
 }
 
 FRotator AShooterCharacter::GetFixedAimRotation() const

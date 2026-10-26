@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "GameFramework/Actor.h"
+#include "ShooterTypes/ShooterTypes.h"
 #include "Weapon.generated.h"
 
 UENUM(BlueprintType)
@@ -25,11 +26,15 @@ public:
 	
 	USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
 	USkeletalMeshComponent* GetMesh3P() const { return Mesh3P; }
+	UMaterialInstanceDynamic* GetReticleDynMatInst();
+	UMaterialInstanceDynamic* GetAmmoCounterDynMatInst();
 	
 	void AttachToOwningPawn() const;
 	void WeaponTrace(FHitResult& OutHit, float TraceLength) const;
 	
 	void LocalFire(const FVector& ImpactPoint, const FVector& ImpactNormal, TEnumAsByte<EPhysicalSurface> ImpactSurfaceType, bool bIsFirstPerson);
+	void Auth_Fire();
+	void Rep_Fire(int32 AuthAmmo);
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FPS|WeaponType")
 	FGameplayTag WeaponType;
@@ -46,6 +51,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FPS|FireType")
 	float FireTime;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FPS|Ammo")
+	int32 MagCapacity;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FPS|Ammo")
+	int32 Ammo;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FPS|Ammo")
+	int32 StartingCarriedAmmo;
+	
+	UPROPERTY(EditDefaultsOnly, Category="FPS|Reticle")
+	FReticleParams ReticleParams;
+	
 protected:
 	virtual void BeginPlay() override;
 	
@@ -61,6 +78,20 @@ protected:
 private:
 	
 	void SetWeaponVisibility(const APawn* OwningPawn) const;
+	
+	int32 Sequence;
+	
+	UPROPERTY(EditDefaultsOnly, Category="FPS|Weapon")
+	TObjectPtr<UMaterialInterface> ReticleMaterial;
+	
+	UPROPERTY(EditDefaultsOnly, Category="FPS|Weapon")
+	TObjectPtr<UMaterialInterface> AmmoCounterMaterial;
+	
+	UPROPERTY()
+	TObjectPtr<UMaterialInstanceDynamic> DynMatInst_Reticle;
+	
+	UPROPERTY()
+	TObjectPtr<UMaterialInstanceDynamic> DynMatInst_AmmoCounter;
 };
 
 

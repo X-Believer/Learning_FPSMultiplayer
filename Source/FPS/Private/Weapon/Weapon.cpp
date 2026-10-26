@@ -2,7 +2,6 @@
 
 
 #include "Weapon/Weapon.h"
-
 #include "KismetTraceUtils.h"
 #include "FPS/FPS.h"
 #include "Interfaces/PlayerInterface.h"
@@ -32,6 +31,10 @@ AWeapon::AWeapon()
 	AimFOV = 65.0f;
 	TraceRadius = 5.0f;
 	FireTime = 0.1f;
+	MagCapacity = 10;
+	Ammo = MagCapacity;
+	StartingCarriedAmmo = 30;
+	Sequence = 0;
 }
 
 void AWeapon::BeginPlay()
@@ -44,6 +47,24 @@ void AWeapon::OnRep_Instigator()
 {
 	Super::OnRep_Instigator();
 	AttachToOwningPawn();
+}
+
+UMaterialInstanceDynamic* AWeapon::GetReticleDynMatInst()
+{
+	if (!IsValid(DynMatInst_Reticle))
+	{
+		DynMatInst_Reticle = UMaterialInstanceDynamic::Create(ReticleMaterial, this);
+	}
+	return DynMatInst_Reticle;
+}
+
+UMaterialInstanceDynamic* AWeapon::GetAmmoCounterDynMatInst()
+{
+	if (!IsValid(DynMatInst_AmmoCounter))
+	{
+		DynMatInst_AmmoCounter = UMaterialInstanceDynamic::Create(AmmoCounterMaterial, this);
+	}
+	return DynMatInst_AmmoCounter;
 }
 
 void AWeapon::AttachToOwningPawn() const
@@ -118,6 +139,30 @@ void AWeapon::LocalFire(const FVector& ImpactPoint, const FVector& ImpactNormal,
 {
 	FireEffects(ImpactPoint, ImpactNormal, ImpactSurfaceType, bIsFirstPerson);
 	
+	if (GetInstigator() && GetInstigator()->IsLocallyControlled())
+	{
+		Ammo = FMath::Clamp(Ammo - 1, 0, MagCapacity);
+		++Sequence;
+	}
+	else
+	{
+		Rep_Fire(Sequence);
+	}
+}
+
+void AWeapon::Auth_Fire()
+{
+	Ammo = FMath::Clamp(Ammo - 1, 0, MagCapacity);
+}
+
+void AWeapon::Rep_Fire(int32 AuthAmmo)
+{
+	if (GetInstigator() && GetInstigator()->IsLocallyControlled())
+	{
+		Ammo = AuthAmmo;
+		--Sequence;
+		Ammo -= Sequence;
+	}
 }
 
 void AWeapon::SetWeaponVisibility(const APawn* OwningPawn) const

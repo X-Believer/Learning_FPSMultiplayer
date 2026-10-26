@@ -10,6 +10,12 @@
 class AWeapon;
 class UWeaponData;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FReticleChanged, UMaterialInstanceDynamic*, ReticleDynMatInst, const FReticleParams&, ReticleParams, bool, bCurrentlyTargetingPlayer);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FAmmoCounterChanged, UMaterialInstanceDynamic*, AmmoCounterDynMatInst, int32, CurrentAmmo, int32, MagCapacity);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FRoundFired, int32, RoundsCurrent, int32, RoundsMax);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAimingStatusChanged, bool, bAiming);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTargetingPlayerStatusChanged, bool, bTargetingPlayer);
+
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class FPS_API UCombatComponent : public UActorComponent
 {
@@ -20,6 +26,9 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	
+	UFUNCTION(BlueprintPure, Category="FPS|Combat")
+	static UCombatComponent* FindCombatComponent(const AActor* Actor) { return IsValid(Actor) ? Actor->FindComponentByClass<UCombatComponent>() : nullptr; }
+	
 	// Cycle to next weapon
 	void Initiate_CycleWeapon();
 	void Initiate_FireWeapon_Pressed();
@@ -27,6 +36,17 @@ public:
 	void Initiate_ReloadWeapon();
 	void Initiate_Aim_Pressed();
 	void Initiate_Aim_Released();
+	
+	UPROPERTY(BlueprintAssignable)
+	FAmmoCounterChanged OnAmmoCounterChanged;
+	UPROPERTY(BlueprintAssignable)
+	FReticleChanged OnReticleChanged;
+	UPROPERTY(BlueprintAssignable)
+	FAimingStatusChanged OnAimingStatusChanged;
+	UPROPERTY(BlueprintAssignable)
+	FTargetingPlayerStatusChanged OnTargetingPlayerStatusChanged;
+	UPROPERTY(BlueprintAssignable)
+	FRoundFired OnRoundFired;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="FPS|Weapon")
 	TObjectPtr<UWeaponData> WeaponData;
@@ -43,6 +63,8 @@ public:
 	
 	AWeapon* GetCurrentWeapon() const { return CurrentWeapon; }
 	
+	void InitializeWeaponWidgets() const;
+	
 protected:
 		
 	UPROPERTY(Transient, BlueprintReadOnly, ReplicatedUsing = OnRep_CurrentWeapon)
@@ -52,9 +74,10 @@ protected:
 	float TraceLength;
 	
 private:
-
 	bool bTriggerPressed;
 	FTimerHandle FireTimer;
+	bool bHitPlayerLastFrame;
+	bool bHitPlayer;
 	
 	void FireTimerFinished();
 	
@@ -80,5 +103,5 @@ private:
 	UFUNCTION()
 	void Local_FireWeapon();
 	UFUNCTION(NetMulticast, Reliable)
-	void Multicast_FireWeapon(const FHitResult& HitResult);
+	void Multicast_FireWeapon(const FHitResult& HitResult, int32 AuthAmmo);
 };
