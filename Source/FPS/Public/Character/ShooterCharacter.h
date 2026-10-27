@@ -33,6 +33,8 @@ public:
 	virtual USkeletalMeshComponent* GetMesh3P_Implementation() const override;
 	virtual void WeaponReplicated_Implementation() override;
 	virtual AWeapon* GetCurrentWeapon_Implementation() const override;
+	virtual int32 GetReserveAmmo_Implementation() const override;
+	virtual void Notify_CycleWeapons_Implementation() override;
 	/* End Player Interface */
 	
 	UFUNCTION(BlueprintCallable)

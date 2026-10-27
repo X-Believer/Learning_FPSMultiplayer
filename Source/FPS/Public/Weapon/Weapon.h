@@ -15,6 +15,16 @@ enum class EFireType : uint8
 	SemiAuto UMETA(DisplayName = "Semi-Automatic"),
 };
 
+UENUM(BlueprintType)
+enum class EWeaponStatus : uint8
+{
+	Idle,
+	Firing,
+	Reloading,
+	Cycling,
+	Unequipped
+};
+
 UCLASS()
 class FPS_API AWeapon : public AActor
 {
@@ -22,14 +32,14 @@ class FPS_API AWeapon : public AActor
 
 public:
 	AWeapon();
-	virtual void OnRep_Instigator() override;
 	
 	USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
 	USkeletalMeshComponent* GetMesh3P() const { return Mesh3P; }
 	UMaterialInstanceDynamic* GetReticleDynMatInst();
 	UMaterialInstanceDynamic* GetAmmoCounterDynMatInst();
 	
-	void AttachToOwningPawn() const;
+	void AttachToOwningPawn(APawn* Pawn) const;
+	void DetachFromOwningPawn() const;
 	void WeaponTrace(FHitResult& OutHit, float TraceLength) const;
 	
 	void LocalFire(const FVector& ImpactPoint, const FVector& ImpactNormal, TEnumAsByte<EPhysicalSurface> ImpactSurfaceType, bool bIsFirstPerson);
@@ -62,6 +72,11 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, Category="FPS|Reticle")
 	FReticleParams ReticleParams;
+	
+	UPROPERTY(EditDefaultsOnly, Category="FPS|Icon")
+	TObjectPtr<UMaterialInterface> WeaponIcon;
+	
+	EWeaponStatus WeaponStatus;
 	
 protected:
 	virtual void BeginPlay() override;

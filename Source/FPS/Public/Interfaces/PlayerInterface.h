@@ -38,4 +38,10 @@ public:
 	
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="FPS|PlayerInterface")
 	AWeapon* GetCurrentWeapon() const;
+	
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="FPS|PlayerInterface")
+	int32 GetReserveAmmo() const;
+	
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="FPS|PlayerInterface")
+	void Notify_CycleWeapons();
 };

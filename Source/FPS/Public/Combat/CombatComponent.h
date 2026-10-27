@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "Components/ActorComponent.h"
 #include "CombatComponent.generated.h"
 
@@ -12,9 +13,10 @@ class UWeaponData;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FReticleChanged, UMaterialInstanceDynamic*, ReticleDynMatInst, const FReticleParams&, ReticleParams, bool, bCurrentlyTargetingPlayer);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FAmmoCounterChanged, UMaterialInstanceDynamic*, AmmoCounterDynMatInst, int32, CurrentAmmo, int32, MagCapacity);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FRoundFired, int32, RoundsCurrent, int32, RoundsMax);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FRoundFired, int32, RoundsCurrent, int32, RoundsMax, int32, RoundsInReserve);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAimingStatusChanged, bool, bAiming);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTargetingPlayerStatusChanged, bool, bTargetingPlayer);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FCurrentREserveAmmoChanged, int32, RoundsInReserve, int32, RoundsInWeapon, UMaterialInterface*, WeaponIconMaterial);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class FPS_API UCombatComponent : public UActorComponent
@@ -36,6 +38,8 @@ public:
 	void Initiate_ReloadWeapon();
 	void Initiate_Aim_Pressed();
 	void Initiate_Aim_Released();
+	UFUNCTION(BlueprintCallable)
+	void Notify_CycleWeapons();
 	
 	UPROPERTY(BlueprintAssignable)
 	FAmmoCounterChanged OnAmmoCounterChanged;
@@ -47,6 +51,8 @@ public:
 	FTargetingPlayerStatusChanged OnTargetingPlayerStatusChanged;
 	UPROPERTY(BlueprintAssignable)
 	FRoundFired OnRoundFired;
+	UPROPERTY(BlueprintAssignable)
+	FCurrentREserveAmmoChanged OnCurrentReserveAmmoChanged;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="FPS|Weapon")
 	TObjectPtr<UWeaponData> WeaponData;
@@ -54,9 +60,16 @@ public:
 	UFUNCTION()
 	void Equip(AWeapon* WeaponToEquip);
 	UFUNCTION()
+	void EquipWeapon(AWeapon* WeaponToEquip);
+	UFUNCTION(Server, Reliable)
+	void Server_EquipWeapon(AWeapon* WeaponToEquip);
+	UFUNCTION()
 	void SpawnInventory();
 	UFUNCTION()
 	void DestroyInventory();
+	
+	UPROPERTY(ReplicatedUsing=OnRep_CurrentReserveAmmo)
+	int32 CurrentReserveAmmo;
 	
 	UPROPERTY(BlueprintReadOnly, Replicated)
 	bool bAiming;
@@ -73,11 +86,25 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category="FPS|Weapon")
 	float TraceLength;
 	
+	UFUNCTION()
+	void BlendOut_CycleWeapon(UAnimMontage* Montage, bool bInterrupted);
+	
 private:
 	bool bTriggerPressed;
 	FTimerHandle FireTimer;
 	bool bHitPlayerLastFrame;
 	bool bHitPlayer;
+	TMap<FGameplayTag, int32> ReserveAmmoMap;
+	int32 Local_WeaponIndex;
+	
+	int32 AdvanceWeaponIndex();
+	void Local_CycleWeapon(int32 WeaponIndex);
+	UFUNCTION(Server, Reliable)
+	void Server_CycleWeapon(int32 WeaponIndex);
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_CycleWeapon(int32 WeaponIndex);
+	
+	void SetCurrentWeapon(AWeapon* OldWeapon, AWeapon* NewWeapon);
 	
 	void FireTimerFinished();
 	
@@ -104,4 +131,7 @@ private:
 	void Local_FireWeapon();
 	UFUNCTION(NetMulticast, Reliable)
 	void Multicast_FireWeapon(const FHitResult& HitResult, int32 AuthAmmo);
+	
+	UFUNCTION()
+	void OnRep_CurrentReserveAmmo();
 };
