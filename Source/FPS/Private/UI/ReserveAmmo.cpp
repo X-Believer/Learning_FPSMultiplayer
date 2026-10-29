@@ -58,6 +58,7 @@ void UReserveAmmo::OnPossessedPawnChanged(APawn* OldPawn, APawn* NewPawn)
 		Image_WeaponIcon->SetRenderOpacity(1.0f);
 		Text_Ammo->SetRenderOpacity(1.0f);
 		NewPawnCombat->OnCurrentReserveAmmoChanged.AddDynamic(this, &ThisClass::OnCurrentReserveAmmoChanged);
+		NewPawnCombat->OnRoundFired.AddDynamic(this, &ThisClass::OnRoundFired);
 	}
 }
 

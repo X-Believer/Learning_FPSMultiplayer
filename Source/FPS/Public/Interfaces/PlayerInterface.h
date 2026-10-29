@@ -44,4 +44,10 @@ public:
 	
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="FPS|PlayerInterface")
 	void Notify_CycleWeapons();
+	
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="FPS|PlayerInterface")
+	void Notify_ReloadWeapon();
+	
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="FPS|PlayerInterface")
+	void AddAmmo(const FGameplayTag& WeaponType, int32 AmmoToAdd);
 };

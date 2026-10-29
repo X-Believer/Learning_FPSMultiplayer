@@ -40,6 +40,10 @@ public:
 	void Initiate_Aim_Released();
 	UFUNCTION(BlueprintCallable)
 	void Notify_CycleWeapons();
+	UFUNCTION(BlueprintCallable)
+	void Notify_ReloadWeapon();
+	
+	void AddAmmo(const FGameplayTag& WeaponType, int32 AmmoToAdd);
 	
 	UPROPERTY(BlueprintAssignable)
 	FAmmoCounterChanged OnAmmoCounterChanged;
@@ -134,4 +138,15 @@ private:
 	
 	UFUNCTION()
 	void OnRep_CurrentReserveAmmo();
+	
+	void Local_ReloadWeapon();
+	
+	UFUNCTION(Server, Reliable)
+	void Server_ReloadWeapon();
+	
+	UFUNCTION(Client, Reliable)
+	void Client_ReloadWeapon(int32 NewWeaponAmmo, int32 NewCarriedAmmo);
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_ReloadWeapon();
 };
