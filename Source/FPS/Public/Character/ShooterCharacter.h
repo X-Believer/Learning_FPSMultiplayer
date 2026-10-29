@@ -8,6 +8,7 @@
 #include "ShooterTypes/ShooterTypes.h"
 #include "ShooterCharacter.generated.h"
 
+class UHealthComponent;
 class UInputAction;
 class UCombatComponent;
 class UCameraComponent;
@@ -37,6 +38,7 @@ public:
 	virtual void Notify_CycleWeapons_Implementation() override;
 	virtual void Notify_ReloadWeapon_Implementation() override;
 	virtual void AddAmmo_Implementation(const FGameplayTag& WeaponType, int32 AmmoToAdd) override;
+	virtual bool DoDamage_Implementation(float DamageAmount, AActor* DamageCauser) override;
 	/* End Player Interface */
 	
 	UFUNCTION(BlueprintCallable)
@@ -59,6 +61,13 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="FPS|Combat")
 	TObjectPtr<UCombatComponent> CombatComponent;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="FPS|Health")
+	TObjectPtr<UHealthComponent> HealthComponent;
+	
+	// 1st person mesh (arms), visible only to the owning player.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="FPS|Mesh")
+	TObjectPtr<USkeletalMeshComponent> Mesh1P;
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="FPS|Camera")
 	TObjectPtr<UCameraComponent> FirstPersonCamera;
 	
@@ -67,6 +76,18 @@ protected:
 	
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnAim(bool bIsAiming);
+	
+	UPROPERTY(EditDefaultsOnly, Category="FPS|Combat")
+	TArray<TObjectPtr<UAnimMontage>> HitReactions;
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_HitReact(int32 MontageIndex);
+	
+	UFUNCTION()
+	void OnDeathStarted();
+	
+	UFUNCTION(BlueprintImplementableEvent)
+	void DeathEffects();
 	
 private:	
 
@@ -89,15 +110,16 @@ private:
 	UPROPERTY(BlueprintReadOnly, Category="FPS|TurnInPlace", meta=(AllowPrivateAccess="true"))
 	float AO_Yaw;
 	
+	FTimerHandle DeathTimer;
+	void DeathTimerFinished();
+	UPROPERTY(EditDefaultsOnly, Category="FPS|Respawn")
+	float RespawnTime;
+	
 	UPROPERTY(BlueprintReadOnly, Category="FPS|Strafing", meta=(AllowPrivateAccess="true"))
 	float MovementOffsetYaw;
 	
 	UPROPERTY(BlueprintReadOnly, Category="FPS|TurnInPlace", meta=(AllowPrivateAccess="true"))
 	ETurnInPlace TurningStatus;
-	
-	// 1st person mesh (arms), visible only to the owning player.
-	UPROPERTY(VisibleAnywhere)
-	TObjectPtr<USkeletalMeshComponent> Mesh1P;
 	
 	UPROPERTY(VisibleAnywhere) 
 	TObjectPtr<USpringArmComponent> SpringArm;

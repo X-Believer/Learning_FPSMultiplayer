@@ -46,6 +46,9 @@ public:
 	void Auth_Fire();
 	void Rep_Fire(int32 AuthAmmo);
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FPS|Weapon")
+	float Damage;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FPS|WeaponType")
 	FGameplayTag WeaponType;
 	

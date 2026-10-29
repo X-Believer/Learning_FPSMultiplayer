@@ -28,6 +28,7 @@ AWeapon::AWeapon()
 	Mesh3P->bReceivesDecals = false;
 	Mesh3P->SetHiddenInGame(true, true);
 	
+	Damage = 15.0f;
 	AimFOV = 65.0f;
 	TraceRadius = 5.0f;
 	FireTime = 0.1f;

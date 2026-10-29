@@ -6,10 +6,16 @@
 #include "EnhancedInputComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Combat/CombatComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "Data/WeaponData.h"
+#include "FPS/FPS.h"
+#include "Game/ShooterGameModeBase.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Health/HealthComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Player/ShooterPlayerController.h"
 #include "Weapon/Weapon.h"
 
 AShooterCharacter::AShooterCharacter()
@@ -44,10 +50,13 @@ AShooterCharacter::AShooterCharacter()
 	
 	CombatComponent = CreateDefaultSubobject<UCombatComponent>(TEXT("CombatComponent"));
 	CombatComponent->SetIsReplicated(true);
+	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
+	HealthComponent->SetIsReplicated(true);
 	
 	DefaultFOV = 90.0f;
 	TurningStatus = ETurnInPlace::NotTurning;
 	bWeaponFirstReplicated = false;
+	RespawnTime = 5.f;
 }
 
 bool AShooterCharacter::HasWeaponFirstReplicated() const
@@ -59,8 +68,13 @@ void AShooterCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	HealthComponent->OnDeathStarted.AddDynamic(this, &ThisClass::OnDeathStarted);
 	FirstPersonCamera->SetFieldOfView(DefaultFOV);
 	StartingAimingRotation = FRotator(0.f, GetBaseAimRotation().Yaw, 0.f);
+	if (AShooterPlayerController* PC = Cast<AShooterPlayerController>(GetController()); IsValid(PC))
+	{
+		PC->bPawnAlive = true;
+	}
 }
 
 bool AShooterCharacter::HasCurrentWeapon() const
@@ -244,6 +258,28 @@ void AShooterCharacter::AddAmmo_Implementation(const FGameplayTag& WeaponType, i
 	}
 }
 
+bool AShooterCharacter::DoDamage_Implementation(float DamageAmount, AActor* DamageCauser)
+{
+	if (!IsValid(HealthComponent)) return false;
+	
+	HealthComponent->ChangeHealthByAmount(-DamageAmount, DamageCauser);
+	const int32 MontageSelection = FMath::RandRange(0, HitReactions.Num() - 1);
+	Multicast_HitReact(MontageSelection);
+	
+	return  false;
+}
+
+void AShooterCharacter::Multicast_HitReact_Implementation(int32 MontageIndex)
+{
+	if (GetNetMode() != NM_DedicatedServer && !IsLocallyControlled())
+	{
+		if (HitReactions.IsValidIndex(MontageIndex))
+		{
+			GetMesh()->GetAnimInstance()->Montage_Play(HitReactions[MontageIndex]);
+		}
+	}
+}
+
 FRotator AShooterCharacter::GetFixedAimRotation() const
 {
 	FRotator AimRotation = GetBaseAimRotation();
@@ -254,6 +290,42 @@ FRotator AShooterCharacter::GetFixedAimRotation() const
 		AimRotation.Pitch = FMath::GetMappedRangeValueClamped(InRange, OutRange, AimRotation.Pitch);
 	}
 	return AimRotation;
+}
+
+void AShooterCharacter::OnDeathStarted()
+{
+	if (HasAuthority())
+	{
+		CombatComponent->DestroyInventory();
+		GetWorld()->GetTimerManager().SetTimer(DeathTimer, this, &ThisClass::DeathTimerFinished, RespawnTime);
+	}
+	if (GetNetMode() != NM_DedicatedServer)
+	{
+		DeathEffects();
+		if (AShooterPlayerController* PlayerController = Cast<AShooterPlayerController>(GetController()))
+		{
+			DisableInput(PlayerController);
+			if (PlayerController->IsLocalController())
+			{
+				if (AShooterPlayerController* ShooterPC = Cast<AShooterPlayerController>(PlayerController))
+				{
+					ShooterPC->bPawnAlive = false;
+				}
+			}
+		}
+	}
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+	GetCapsuleComponent()->SetCollisionResponseToChannel(FPSTraceChannels::ECC_Weapon, ECR_Ignore);
+	GetMesh()->SetCollisionResponseToChannel(FPSTraceChannels::ECC_Weapon, ECR_Ignore);
+}
+
+void AShooterCharacter::DeathTimerFinished()
+{
+	AShooterGameModeBase* GM = Cast<AShooterGameModeBase>(UGameplayStatics::GetGameMode(this));
+	if (IsValid(GM))
+	{
+		GM->RequestRespawn(this, GetController());
+	}
 }
 
 void AShooterCharacter::Input_CycleWeapon()

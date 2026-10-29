@@ -50,4 +50,7 @@ public:
 	
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="FPS|PlayerInterface")
 	void AddAmmo(const FGameplayTag& WeaponType, int32 AmmoToAdd);
+	
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category="FPS|PlayerInterface")
+	bool DoDamage(float DamageAmount, AActor* DamageCauser);
 };
