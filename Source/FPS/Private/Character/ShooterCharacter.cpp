@@ -8,6 +8,7 @@
 #include "Combat/CombatComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Data/WeaponData.h"
+#include "Elimination/EliminationComponent.h"
 #include "FPS/FPS.h"
 #include "Game/ShooterGameModeBase.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -52,6 +53,8 @@ AShooterCharacter::AShooterCharacter()
 	CombatComponent->SetIsReplicated(true);
 	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
 	HealthComponent->SetIsReplicated(true);
+	EliminationComponent = CreateDefaultSubobject<UEliminationComponent>(TEXT("EliminationComponent"));
+	EliminationComponent->SetIsReplicated(false);
 	
 	DefaultFOV = 90.0f;
 	TurningStatus = ETurnInPlace::NotTurning;
@@ -74,6 +77,11 @@ void AShooterCharacter::BeginPlay()
 	if (AShooterPlayerController* PC = Cast<AShooterPlayerController>(GetController()); IsValid(PC))
 	{
 		PC->bPawnAlive = true;
+	}
+	
+	if (HasAuthority())
+	{
+		CombatComponent->OnRoundReported.AddDynamic(EliminationComponent, &UEliminationComponent::OnRoundReported);
 	}
 }
 
@@ -261,8 +269,9 @@ void AShooterCharacter::AddAmmo_Implementation(const FGameplayTag& WeaponType, i
 bool AShooterCharacter::DoDamage_Implementation(float DamageAmount, AActor* DamageCauser)
 {
 	if (!IsValid(HealthComponent)) return false;
+
+	if (const bool bLethal = HealthComponent->ChangeHealthByAmount(-DamageAmount, DamageCauser)) return true;
 	
-	HealthComponent->ChangeHealthByAmount(-DamageAmount, DamageCauser);
 	const int32 MontageSelection = FMath::RandRange(0, HitReactions.Num() - 1);
 	Multicast_HitReact(MontageSelection);
 	

@@ -8,6 +8,7 @@
 #include "ShooterTypes/ShooterTypes.h"
 #include "ShooterCharacter.generated.h"
 
+class UEliminationComponent;
 class UHealthComponent;
 class UInputAction;
 class UCombatComponent;
@@ -63,6 +64,9 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="FPS|Health")
 	TObjectPtr<UHealthComponent> HealthComponent;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="FPS|Combat")
+	TObjectPtr<UEliminationComponent> EliminationComponent;
 	
 	// 1st person mesh (arms), visible only to the owning player.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="FPS|Mesh")
